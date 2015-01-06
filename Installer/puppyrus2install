@@ -1,0 +1,180 @@
+#!/bin/sh
+#puppyrus2install v-007 DdShurick GPL v3
+#Установка PuppyRus и загрузчика grldr
+#Сообщения об ошибках
+copy_err () {
+case $1 in
+1) Xdialog --title "Установщик PuppyRus2" --msgbox "Не найдены initrd и vmlinuz.
+ Установка прервана." 0 0
+exit 1 ;;
+2) Xdialog --title "Установщик PuppyRus2" --msgbox "Не найден $(basename $PFS)" 0 0
+[ $2 ] || exit 1 ;;
+esac
+}
+
+#Найти и выбрать модули
+Xdialog --title "Установщик PuppyRus2" --yesno "Все модули, подключенные сейчас
+будут копированы во вновь устанавливаемую систему.
+Если вы желаете изменить состав модулей, прервите
+установку, отключите ненужные и подключите нужные
+вам модули. Продолжить установку?" 0 0
+[ $? = 0 ] || exit
+
+#Найти и выбрать диск
+DEVS=$(probedisk2)
+DEVL=$(echo "$DEVS" | grep -v optical | cut -f 1,3 -d '|' | sed -e 's/ /_/g;s/|/ /g' )
+
+if [ "$(echo "$DEVL" | wc -l)" -gt "1" ]; then
+DEV=$(Xdialog --title "Установщик PuppyRus2" --menu "Выберите из списка" 10 40 0 $(echo "$DEVL") 2>&1)
+[ "$?" != "0" ] && exit 1
+else
+DEV=$(echo "$DEVL" | cut -f1 -d ' ') #ex: /dev/sdb
+fi
+
+[ "$(echo "$DEVS" | grep $DEV | grep drive)" != "" ] && PMEDIA1="pmedia=atahd"
+[ "$(echo "$DEVS" | grep $DEV | grep usbdrv)" != "" ] && PMEDIA1="pmedia=usbflash"
+
+#Найти и выбрать раздел
+PARTS=$(probepart -h | grep -vE "iso9660|none|swap" | grep $DEV | cut -f 1,3 -d '|' | sed -e 's/ /_/g;s/|/ /g;s/$/_bytes/g' )
+if [ "$(echo "$PARTS" | wc -l)" -gt "1" ]; then
+PART=$(Xdialog --title "Установщик PuppyRus2" --menu "Выберите из списка" 10 40 0 $(echo "$PARTS") 2>&1)
+[ "$?" != "0" ] && exit 1
+else
+PART=$(echo "$PARTS" | cut -f1 -d ' ') #ex: /dev/sdb1
+fi
+
+psubdir () {
+INPSUBDIR="/$(Xdialog --title "Установщик PuppyRus2" --inputbox "Введите имя субдиректории
+для установки PuppyRus.
+ Если ничего не вводить,
+PuppyRus будет установлен
+ в корень раздела" 0 0 2>&1)"
+[ "$?" != "0" ] && exit 1
+}
+psubdir
+
+#Точки монтирования, запомнить состояние
+OFMNTPT=$(echo "${DEV}1/" | sed 's/dev/mnt/')
+if [ "$(mount | grep ${DEV}1/)" = "" ]; then
+[ -d $OFMNTPT ] || mkdir -p $OFMNTPT
+mount ${DEV}1 $OFMNTPT && MOUNT1=0
+fi
+PMNTPT="$(mount | grep $PART | cut -f3 -d' ')"
+if [ "$PMNTPT" = "" ]; then
+PMNTPT=$(echo "${PART}" | sed 's/dev/mnt/') 
+[ -d $PMNTPT ] || mkdir -p $PMNTPT
+mount ${PART} $PMNTPT && MOUNT2=0
+fi
+
+#Каталог PuppyRus
+if [ ! "${INPSUBDIR}" = "/" -a -d ${PMNTPT}${INPSUBDIR} ]; then
+Xdialog --title "Установщик PuppyRus2" --msgbox "Каталог ${INPSUBDIR} уже существует. Задайте другое имя." 0 0
+psubdir
+fi
+[ "${INPSUBDIR}" = "/" ] || mkdir -p ${PMNTPT}${INPSUBDIR}
+
+#Поиск и копирование файлов
+{ M=$(losetup-FULL -a | awk '{print($3)}' | tr -d '()' | sed 's/^\/mnt/\/initrd\/mnt/' | grep -v "\.[234]fs")
+N=$(echo $M | wc -w)
+n=$(expr 100 / $N)
+nn=$n
+for PFS in $M
+do cp $PFS ${PMNTPT}${INPSUBDIR}${PFSDIR} && echo $n || copy_err 2 ${PFSDIR}
+if [ "$PFSDIR" = "" ];then
+PUPFILEPATH=$(dirname $(find /initrd/mnt/dev_*/ -name $(basename $PFS) | head -n1))
+ if [ $PUPFILEPATH ];then
+ cp $PUPFILEPATH/{vmlinuz,initrd.gz} ${PMNTPT}${INPSUBDIR} || copy_err 1
+ fi
+PFSDIR=/packages/ #второй и последующие модули - в packages
+mkdir -p ${PMNTPT}${INPSUBDIR}${PFSDIR}
+fi
+n=$(expr $n + $nn)
+done } | Xdialog --gauge "Копирование файлов..." 6 60 0
+PFSDIR=packages
+
+#Загрузчик:
+#Не переписывать существующий menu.lst, только дописать PuppyRus
+[ -f ${OFMNTPT}boot/grub/menu.lst ] && BG="boot/grub/"
+if [ ! -f ${OFMNTPT}menu.lst ]; then
+MENU=yes
+echo "default 0
+timeout 25
+gfxmenu /boot/pictures/PUPPYRUS.gz
+/boot/unifont/unifont-rus.hex.gz
+" > ${OFMNTPT}menu.lst
+fi
+if [ "${INPSUBDIR}" != "/" ]; then
+MENUPSUBDIR="psubdir=${INPSUBDIR:1}"
+INPSUBDIR="${INPSUBDIR}/"
+fi
+[ $PFSDIR ] && PFSDIR="pfsdir=${INPSUBDIR}${PFSDIR}"
+echo "
+ title PuppyRus (on ${PART:5})
+  find --set-root --ignore-floppies --ignore-cd ${INPSUBDIR}initrd.gz
+  kernel ${INPSUBDIR}vmlinuz ${PMEDIA1} ${MENUPSUBDIR} ${PFSDIR} pfix=fsck
+  initrd ${INPSUBDIR}initrd.gz
+
+ title PuppyRus (on ${PART:5} RAM-mode)
+  find --set-root --ignore-floppies --ignore-cd ${INPSUBDIR}initrd.gz
+  kernel ${INPSUBDIR}vmlinuz ${PMEDIA1} ${MENUPSUBDIR} ${PFSDIR} pfix=ram
+  initrd ${INPSUBDIR}initrd.gz
+" >> ${OFMNTPT}${BG}menu.lst
+[ "$MENU" = "yes" ] && echo "
+ title Windows\nBoot up Windows if installed
+  map (hd1) (hd0)
+  map (hd0) (hd1)
+  map --hook
+  errorcheck off
+  find --set-root --ignore-floppies --ignore-cd  /bootmgr
+  chainloader /bootmgr
+  find --set-root --ignore-floppies --ignore-cd  /ntldr
+  chainloader /ntldr
+  find --set-root --ignore-floppies --ignore-cd   /io.sys
+  chainloader /io.sys
+  errorcheck on
+
+ title Grub4Dos commandline\n(for experts only)
+  commandline
+
+ title Reboot computer
+  reboot
+
+ title Halt computer
+  halt
+" >> ${OFMNTPT}menu.lst
+
+Xdialog --title "Установка загрузчика." --help "Если у вас установлена единственная ОС Windows,
+то рекомендуется установить загрузчик grub4dos.
+MBR (главная загрузочная запись) будет сохранена на
+разделе $OFMNTPT в файле backup.mbr, откуда она может
+быть восстановлена командой
+dd if=${OFMNTPT}backup.mbr of=$DEV bs=512 count=1
+
+Если у вас уже установлен загрузчик Linux, то достаточно
+добавить запись PuppyRus в файл его конфигурации.
+См. $OFMNTPT/menu.lst" --yesno "Нужно ли устанавливать загрузчик?" 0 0
+if [ "$?" = "0" ]; then
+#Файлы загрузчика
+ if [ ! -f $OFMNTPT/grldr ]; then
+cp /usr/lib/grub4dos/grldr $OFMNTPT
+ fi
+ if [ ! -f ${OFMNTPT}boot/grub/menu.lst ]; then
+[ -d ${OFMNTPT}boot ] || mkdir ${OFMNTPT}boot
+mkdir ${OFMNTPT}boot/{pictures,unifont}
+cp /usr/lib/grub4dos/PUPPYRUS.gz ${OFMNTPT}boot/pictures/
+cp /usr/lib/grub4dos/unifont-rus.hex.gz ${OFMNTPT}boot/unifont/
+ else
+cp ${OFMNTPT}boot/grub/menu.lst ${OFMNTPT}menu.lst #fat32 не позволяет ln -s, поэтому cp
+ fi
+
+#Прописываем загрузчик
+MYLOG=/tmp/$(basename "$0").log
+cp -f /usr/lib/grub4dos/grldr.mbr /tmp/wee.mbr >>$MYLOG 2>&1
+dd if=$DEV bs=1 skip=439 count=72 2>/dev/null | dd of=/tmp/wee.mbr bs=1 seek=439 conv=notrunc >>$MYLOG 2>&1
+dd if=$DEV of=${OFMNTPT}backup.mbr bs=512 count=1 >>$MYLOG 2>&1 #backup
+dd if=/tmp/wee.mbr of=$DEV >>$MYLOG 2>&1
+fi
+[ "$MOUNT1" = "0" ] && umount ${OFMNTPT:0:9}
+[ "$MOUNT2" = "0" ] && umount ${PMNTPT:0:9}
+
+Xdialog --title "Установщик PuppyRus2" --msgbox "Установка закончена" 0 0

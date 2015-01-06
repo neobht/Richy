@@ -1,0 +1,136 @@
+#!/bin/sh
+#installer v-001 DdShurick 05.01.15. GPL v2
+[ $(whoami) = root ] || exec loginroot $0
+export Info="<window title=\"Установка Puppy\">
+ <vbox><hbox>
+  <pixmap><input file>/usr/share/pixmaps/info-64x64.png</input></pixmap>
+  <text><label> Все модули, подключенные сейчас, будут скопированы во вновь устанавливаемую систему. Если вы желаете изменить состав модулей, прервите установку, отключите ненужные и подключите нужные вам модули.</label></text>
+ </hbox><hbox>
+  <button ok></button>
+  <button no></button>
+ </hbox>
+</vbox></window>"
+
+eval $(gtkdialog3 -c --geometry=430x110 --display=:0 --program=Info)
+[ "$EXIT" = "OK" ] || exit 1
+
+msg_err() {
+export MsgErr="<window title=\"Ошибка\">
+ <vbox>
+  <pixmap><input file>/usr/share/pixmaps/alert-64x64.png</input></pixmap>
+  <text><label>$1</label></text>
+  </vbox></window>"
+eval $(gtkdialog3 -c --geometry=200x100 --display=:0 --program=MsgErr)
+exit 1	
+}
+
+msg_ask() {
+export MsgAsk="<window title=\"Инсталлер\">
+ <vbox>
+  <pixmap><input file>/usr/share/pixmaps/Help-icon-64x64.png</input></pixmap>
+  <text><label>$1</label></text>
+  <hbox>
+  <button ok></button>
+  <button no></button>
+ </hbox>
+  </vbox></window>"
+eval $(gtkdialog3 -c --geometry=240x130 --display=:0 --program=MsgAsk)
+[ "$EXIT" = "No" -o  "$EXIT" = "abort" ] && exit
+}
+
+format_size_func() {
+ if [ $SIZE -gt 1048576 ];then #1024*1024
+  SIZE=$(dc $SIZE 1048576 \/ p)
+  SIZE="$(printf "%.1f" $SIZE)GB"
+ elif [ $SIZE -gt 1024 ];then
+  SIZE=$(dc $SIZE 1024 \/ p)
+  SIZE="$(printf "%.1f" $SIZE)MB"
+ else
+  SIZE="${SIZE}KB"
+ fi
+}
+
+
+
+#Найти и выбрать диск для установки.
+: > /tmp/devlist
+for DEV in $(awk '!/loop|[a-z]$/ {print $4}' /proc/partitions) # | while read DEV
+do
+[ "$(cat /sys/block/${DEV:0:3}/events)" = "media_change eject_request" ] && continue
+[ "$(guess_fstype /dev/$DEV)" = "swap" ] && continue
+PMEDIA=atahd
+[ "$(cat /sys/block/${DEV:0:3}/events)" = "media_change" ] && PMEDIA=usbflash
+MODEL=$(cat /sys/block/${DEV:0:3}/device/model)
+SIZE=$(($(cat /sys/class/block/$DEV/size) * $(cat /sys/block/${DEV:0:3}/queue/logical_block_size) / 1024))
+format_size_func
+echo "<item>\" $DEV $PMEDIA $MODEL $SIZE \"</item>" >> /tmp/devlist
+done
+case $(cat /tmp/devlist | wc -l) in
+0) msg_err "Устройства не найдены" 
+exit
+;;
+1) DEV=$(awk '{print $2}' /tmp/devlist)
+PMEDIA=$(awk '{print $3}' /tmp/devlist)
+;;
+[2-9])
+export MENU="<vbox>
+  <text><label>Выберите раздел для установки</label></text>
+  <list>
+   <variable>DEV</variable>
+   $(cat /tmp/devlist)
+  </list>
+  <hbox>
+  <button><label>Выбрать</label></button>
+  <button cancel></button>
+  </hbox>
+ </vbox>"
+eval $(gtkdialog3 -c --program "MENU" --geometry 300x150)
+[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit
+[ "$DEV" ] || msg_err "Ничего не выбрано"
+;;
+esac
+DEV=$(echo "$DEV" | awk '{print $1}')
+if [ "$(grep $DEV /proc/mounts)" = "" ]; then
+mkdir -p /mnt/$DEV && mount /dev/$DEV /mnt/$DEV && UMNT=1 || msg_err "Ошибка монтирования $DEV"
+fi
+
+export PSUBDIR="<vbox>
+  <text><label>Имя каталога с файлами</label></text>
+    <entry>
+      <variable>PSUBDIR</variable>
+    </entry>
+    <hbox>
+      <button ok></button>
+      <button cancel></button>
+    </hbox>
+  </vbox>"
+eval $(gtkdialog3 -c --program "PSUBDIR")
+[ "$EXIT" = "Cancel" -o  "$EXIT" = "abort" ] && exit
+[ "$PSUBDIR" = "" ] && msg_err "Каталог для установки не выбран"
+[ -d /mnt/$DEV/$PSUBDIR ] && msg_err "Каталог $PSUBDIR уже существует"
+
+#Поиск и копирование ядра и рамдиска
+[ -d /initrd ] && PREF=/initrd
+DIR=$(cat /proc/cmdline | tr ' ' '\n' | grep dir | cut -d '=' -f 2)
+#IFDIR=$(find /initrd/mnt -maxdepth 2 -type d -name $DIR)
+#IFDIR="$(ls -d $PREF/mnt/*/$DIR)"
+
+if [ -f $PREF/mnt/*/$DIR/vmlinuz* -a -f $PREF/mnt/*/$DIR/initrd*z ]; then
+ mkdir -p /mnt/$DEV/$PSUBDIR/base /mnt/$DEV/$PSUBDIR/modules /mnt/$DEV/$PSUBDIR/optional #и т. д.
+ cp $PREF/mnt/*/$DIR/vmlinuz* /mnt/$PDEV1/$PSUBDIR/
+ cp $PREF/mnt/*/$DIR/initrd* /mnt/$PDEV1/$PSUBDIR/
+else
+msg_err "Файлы не найдены, установка прервана."
+ exit 1
+fi
+for MOD in $(losetup | awk '/^0|kernel|-base/ {print $3}')
+do
+cp "$MOD" /mnt/$DEV/$PSUBDIR/base/
+done
+for MOD in $(losetup | awk '!/^0|kernel|-base/ {print $3}')
+do
+cp "$MOD" /mnt/$DEV/$PSUBDIR/modules/
+done
+[ "$UMNT" = 1 ] && umount /mnt/$DEV
+
+msg_ask "Копирование файлов завершено. Устанавливать загрузчик?"
