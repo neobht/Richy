@@ -111,11 +111,9 @@ eval $(gtkdialog3 -c --program "PSUBDIR")
 
 #Поиск и копирование ядра и рамдиска
 eval $(cat /proc/cmdline | tr ' ' '\n' | egrep 'dir|pfix')
-[ "$pfix" != "copy" -a -d /initrd ] && PREF=/initrd
-[ "$(ls /mnt/live/memory/copy2ram)" = "" ] || PREF=/mnt/live
+[ -d /initrd ] && PREF=/initrd #Richy
+[ -d /mnt/live/memory -a "$(ls /mnt/live/memory/copy2ram)" != "" ] && PREF=/mnt/live #PRA
 IFDIR=${IFDIR}$(find /mnt -maxdepth 2 -type d -name $dir | grep -v '/$')
-#IFDIR=$PREF/mnt/$pdev1/$psubdir
-#if [ -f $IFDIR/vmlinuz* -a -f $IFDIR/initrd*z ]; then
 if [ -f $IFDIR/vmlinuz* ]; then
 find $IFDIR/ -maxdepth 1 -type d | grep -v '/$' | while read DIR
  do
@@ -127,16 +125,14 @@ else
 msg_err "Файл vmlinuz не найден"
 fi
 #копирование модулей
-#for MOD in $(busybox losetup | awk '/0[0-9][0-9]-|kernel|-base/ {print $3}')
-for MOD in $(busybox losetup | awk '{print $3}')
+for MOD in $(busybox losetup | awk '/0[0-9][0-9]-|kernel|-base/ {print $3}')
 do
-MDIR=$(basename $(dirname $MOD))
-cp "${PREF}${MOD}" /mnt/$PDEV1/$PSUBDIR/$MDIR #base/
+cp "${PREF}${MOD}" /mnt/$PDEV1/$PSUBDIR/base/
 done
-#for MOD in $(busybox losetup | awk '!/0[0-9][0-9]-|kernel|-base/ {print $3}')
-#do
-#cp "${PREF}${MOD}" /mnt/$PDEV1/$PSUBDIR/modules/
-#done
+for MOD in $(busybox losetup | awk '!/0[0-9][0-9]-|kernel|-base/ {print $3}')
+do
+cp "${PREF}${MOD}" /mnt/$PDEV1/$PSUBDIR/modules/
+done
 [ "$UMNT" = 1 ] && umount /mnt/$DEV
 
 msg_ask "Копирование файлов завершено. Устанавливать загрузчик?"
