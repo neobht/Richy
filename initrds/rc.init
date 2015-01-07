@@ -70,52 +70,52 @@ KERNELVER="`uname -r`"
 
 #100318 perform a f.s. check...
 fsckme_func() { #passed params: partition filesystem [pupsavefile]
- case $2 in
-  ext2|ext3|ext4)
-   e2fsck -y -f /dev/$1 >/tmp/chkret &
-   echo -e "\\033[1;35m" >/dev/console #35=purple
-   if [ "${1}" = "loop1" ];then
-    echo -n "Проверка файловой системы 'save file', ждите..." >/dev/console
-   else
-    echo -n "Проверка файловой системы '${1}', ждите..." >/dev/console
-   fi
-   usleep 200000 #100604 TazOC gave me idea that delay before pidof is good.
-   while [ "`pidof e2fsck`" != "" ];do
-    sleep 1
-    echo -n "." >/dev/console
-   done
-   echo -en "\\033[0;39m" >/dev/console
-  ;;
- esac
- if [ $3 ];then
-  PFSCK="yes"
- fi
+    case $2 in
+        ext2|ext3|ext4)
+            e2fsck -y -f /dev/$1 >/tmp/chkret &
+            echo -e "\\033[1;35m" >/dev/console #35=purple
+            if [ "${1}" = "loop1" ];then
+                echo -n "Проверка файловой системы 'save file', ждите..." >/dev/console
+            else
+                echo -n "Проверка файловой системы '${1}', ждите..." >/dev/console
+            fi
+            usleep 200000 #100604 TazOC gave me idea that delay before pidof is good.
+            while [ "`pidof e2fsck`" != "" ];do
+                sleep 1
+                echo -n "." >/dev/console
+            done
+            echo -en "\\033[0;39m" >/dev/console
+            ;;
+    esac
+    if [ $3 ];then
+        PFSCK="yes"
+    fi
 }
 
 check_status()
 {
-  /bin/echo -en "\\033[72G" >/dev/console #move to column 72.
-  if [ $1 -eq 0 ]
-  then
-    /bin/echo -en "\\033[1;32mготово" >/dev/console
-    /bin/echo -e "\\033[0;39m" >/dev/console
-  else
-    /bin/echo -en "\\033[1;31mошибка" >/dev/console
-    /bin/echo -e "\\033[0;39m" >/dev/console
-    echo -en "\\033[1;35m" >/dev/console #35=purple
-    echo -n "Последние 4 строки /tmp/bootinit.log..." >/dev/console
-    /bin/echo -e "\\033[0;39m" >/dev/console
-    echo -en "\\033[1;31m" >/dev/console #31=red
-    cat /tmp/bootinit.log | tail -n 4 >/dev/console
-    /bin/echo -en "\\033[0;39m" >/dev/console
-    echo -en "\\033[1;35m" >/dev/console #35=purple
-    echo -n "Последние 4 строки kernel log..." >/dev/console
-    /bin/echo -e "\\033[0;39m" >/dev/console
-    echo -en "\\033[1;31m" >/dev/console #31=red
-    dmesg | tail -n 4 >/dev/console
-    /bin/echo -en "\\033[0;39m" >/dev/console
-    exec /bin/sh >/dev/console 2>&1
-  fi
+    /bin/echo -en "\\033[72G" >/dev/console #move to column 72.
+    if [ $1 -eq 0 ]
+    then
+        /bin/echo -en "\\033[1;32mготово" >/dev/console
+        /bin/echo -e "\\033[0;39m" >/dev/console
+    else
+        /bin/echo -en "\\033[1;31mошибка" >/dev/console
+        /bin/echo -e "\\033[0;39m" >/dev/console
+        echo -en "\\033[1;35m" >/dev/console #35=purple
+        echo -n "Последние 4 строки /tmp/bootinit.log..." >/dev/console
+        /bin/echo -e "\\033[0;39m" >/dev/console
+        echo -en "\\033[1;31m" >/dev/console #31=red
+        cat /tmp/bootinit.log | tail -n 4 >/dev/console
+        /bin/echo -en "\\033[0;39m" >/dev/console
+        echo -en "\\033[1;35m" >/dev/console #35=purple
+        echo -n "Последние 4 строки kernel log..." >/dev/console
+        /bin/echo -e "\\033[0;39m" >/dev/console
+        echo -en "\\033[1;31m" >/dev/console #31=red
+        dmesg | tail -n 4 >/dev/console
+        /bin/echo -en "\\033[0;39m" >/dev/console
+        exec /bin/sh >/dev/console 2>&1
+    fi
 }
 
 [ $pmedia ] && PMEDIA=$pmedia #boot parameter, broad category of boot media. ex: cd.
@@ -128,23 +128,23 @@ check_status()
 #now supporting a boot menu...
 RDSH=""
 if [ "$pfix" ];then
- for ONEFIX in `echo -n "$pfix" | tr ',' ' '`
- do
-  case $ONEFIX in
-   ram)     PRAMONLY="yes";;      #run in ram only (do not load ${DISTRO_FILE_PREFIX}save).
-   ro)		RO="-r";;
-   nosoft)  PSOFT="no";;           #do not losd soft.pfs
-   rdsh)    RDSH="yes";;          #exit to shell in initial ramdisk.
-   rdsh0)   RDSH="0";;            #drop out early, before loading drivers.
-   rdsh6)   RDSH="6";;            #w091027 drop out just before mount layerfs.
-   nox)     PNOX="yes";;          #do not start X.
-   clean)   PCLEAN="yes";;        #force version upgrade and cleanup.
-   purge)   PPURGE="yes";;        #radical cleanup for broken system.
-   copy)    PCOPY="yes";;         #copy .sfs files into ram.
-   fsck)    PFSCK="yes";;         #do a fsck of ${DISTRO_FILE_PREFIX}save file.
-   [0-9]*)  PIGNORELAST=$ONEFIX;; #blacklist last $ONEFIX folders (multisession).
-  esac
- done
+    for ONEFIX in `echo -n "$pfix" | tr ',' ' '`
+    do
+        case $ONEFIX in
+            ram)     PRAMONLY="yes";;      #run in ram only (do not load ${DISTRO_FILE_PREFIX}save).
+            ro) RO="-r";;
+            nosoft)  PSOFT="no";;           #do not losd soft.pfs
+            rdsh)    RDSH="yes";;          #exit to shell in initial ramdisk.
+            rdsh0)   RDSH="0";;            #drop out early, before loading drivers.
+            rdsh6)   RDSH="6";;            #w091027 drop out just before mount layerfs.
+            nox)     PNOX="yes";;          #do not start X.
+            clean)   PCLEAN="yes";;        #force version upgrade and cleanup.
+            purge)   PPURGE="yes";;        #radical cleanup for broken system.
+            copy)    PCOPY="yes";;         #copy .sfs files into ram.
+            fsck)    PFSCK="yes";;         #do a fsck of ${DISTRO_FILE_PREFIX}save file.
+            [0-9]*)  PIGNORELAST=$ONEFIX;; #blacklist last $ONEFIX folders (multisession).
+        esac
+    done
 fi
 
 mount -t proc none /proc
@@ -168,8 +168,8 @@ echo 1 > /sys/power/tuxonice/do_resume
 
 for S in $SWAP
 do
-swapon $SWAP || continue
-SWAPON=yes
+    swapon $SWAP || continue
+    SWAPON=yes
 done
 
 ############################################
@@ -177,182 +177,182 @@ done
 #######################FINDING AND LOADING PUPPY FILES###########################
 [ "$RDSH" = "0" ] && exec /bin/sh >/dev/console 2>&1
 hd_load () {
-[ "$PCOPY" = "yes" ] && mount -t tmpfs tmpfs /mnt/tmpfs
-if [ "$PDEV1" = "" ]; then
-echo "Укажите загрузочное устройство, например sda1" > /dev/console
-read PDEV1
-fi
-echo -n "Монтирование загрузочного устройства" > /dev/console
-[ ${PDEV1:0:4} = ${PDEV1:0:7} ] && PTH='/dev/'|| PTH='UUID='
-until mount ${PTH}${PDEV1} /mnt/dev_base $RO 2>/dev/null && check_status 0
-do
-sleep 1
-echo -n . >/dev/console
-done
-if [ "$PSUBDIR" = "" ]; then
-echo "Укажите загрузочный каталог, если файлы PuppyRus
-в корне раздела просто нажмите Enter" > /dev/console
-read PSUBDIR
-[ $PSUBDIR ] && PSUBDIR=/$PSUBDIR
-fi
-find /mnt/dev_base${PSUBDIR}/base/${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}-base.sfs 2>/dev/null > /tmp/PUPPYFILES
-echo -n "Загружается базовый файл" > /dev/console
-if [ "$PCOPY" = "yes" ]; then
-cp /mnt/dev_base${PSUBDIR}/base/${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}-base.sfs /mnt/tmpfs/
-mount -o loop /mnt/tmpfs/${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}-base.sfs /pup_ro2 || (echo "База не найдена">/dev/console; check_status 1)
-else
-mount -o loop /mnt/dev_base${PSUBDIR}/base/${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}-base.sfs /pup_ro2  || (echo "База не найдена">/dev/console; check_status 1)
-fi
-if [ -d /mnt/dev_base$PSUBDIR/changes -a "$RO" != "-r" ]; then
-ln -s /mnt/dev_base$PSUBDIR/changes /pup_rw || check_status 1
-echo -n ", подключается каталог сохранения." > /dev/console
-elif [ -f /mnt/dev_base$PSUBDIR/base/${DISTRO_FILE_PREFIX}-save.sfs ]; then 
- if [ "$PCOPY" = "yes" ]; then
-cp /mnt/dev_base$PSUBDIR/base/${DISTRO_FILE_PREFIX}-save.sfs /mnt/tmpfs/
-mount -o loop /mnt/tmpfs/${DISTRO_FILE_PREFIX}-save.sfs /pup_ro1 || check_status 1
- else
-mount -o loop /mnt/dev_base$PSUBDIR/base/${DISTRO_FILE_PREFIX}-save.sfs /pup_ro1 || check_status 1
- fi
-UMNTMAIN='/pup_ro1=ro:'
-MKRAM="yes"
-echo -n " и файл сохранения " > /dev/console
-PUPMODE=11
-elif [ -f /mnt/dev_base$PSUBDIR/${DISTRO_FILE_PREFIX}-save.[234]fs -a "$PRAMONLY" != "yes" ]; then
- if [ "$(cat /sys/block/${PDEV1:0:3}/events)" = "media_change" ]; then
-mount -o loop /mnt/dev_base$PSUBDIR/${DISTRO_FILE_PREFIX}-save.[234]fs /pup_ro1 || check_status 1
-MKRAM="yes"
-UMNTMAIN='/pup_ro1=ro:'
-echo -n " и файл сохранения " > /dev/console
-PUPMODE=13
-PMEDIA=usbflash
- else
-mkdir /pup_rw 
-mount -o loop /mnt/dev_base$PSUBDIR/${DISTRO_FILE_PREFIX}-save.[234]fs /pup_rw || check_status 1
-PUPMODE=12
- fi
-else
-MKRAM="yes"
-PUPMODE=5
-fi
-if [ -f /mnt/dev_base$PSUBDIR/base/kernel-${KERNELVER}.sfs ]; then
-echo /mnt/dev_base$PSUBDIR/base/kernel-${KERNELVER}.sfs >> /tmp/PUPPYFILES
- if [ "$PCOPY" = "yes" ]; then
-cp /mnt/dev_base$PSUBDIR/base/kernel-${KERNELVER}.sfs /mnt/tmpfs
-losetup /dev/loop2 /mnt/tmpfs/kernel-${KERNELVER}.sfs
-mount /dev/loop2 /pup_z || check_status 1
- else
-losetup /dev/loop2 /mnt/dev_base$PSUBDIR/base/kernel-${KERNELVER}.sfs
-mount /dev/loop2 /pup_z || check_status 1
- fi
-ZLAYER=':/pup_z=ro'
-fi
-if [ "$MKRAM" = "yes" ]; then
- ALLOCK=$(($(free | grep 'Mem:' | tr -s ' ' | cut -f 2 -d ' ') / 2)) #half of physical.
- [ $ALLOCK -gt 524288 ] && ALLOCK=524288
- mkdir /pup_rw
- mount -t tmpfs -o size=${ALLOCK}k tmpfs /pup_rw
-echo -n " плюс tmpfs." > /dev/console
-fi
-check_status 0
-########################END FINDING AND LOADING PUPPY FILES############################
-
-##########################FINDING AND LOADING PUPPY MODULES###########################
-
-if [ "$PSOFT" != "no" -o -d /mnt/dev_base{PSUBDIR}/${PFSDIR} ];then
-EXTRASFSLIST="$modules $(find /mnt/dev_base${PSUBDIR}/${PFSDIR} -name *\.pfs -exec basename {} \;)"
- if [ "$EXTRASFSLIST" != "" ];then
-echo -n "Загружаются модули программ" > /dev/console
-echo "$EXTRASFSLIST" > /tmp/PFSMODULES
-CNTLOOP=4
-  for ONEEXTRA in $EXTRASFSLIST
-  do
-   [ "$(dirname $ONEEXTRA)" = "." ] && PFSSDIR="/mnt/dev_base$PSUBDIR/$PFSDIR" || PFSSDIR="/mnt/dev_base/"
-   [ -f ${PFSSDIR}${ONEEXTRA} ] || continue
-   [ "$(mount | grep $ONEEXTRA)" = "" ] || continue
-    mkdir -p /pup_ro${CNTLOOP}
-    if [ "$PCOPY" = "yes" ]; then
-    cp ${PFSSDIR}${ONEEXTRA} /mnt/tmpfs/
-    mount -o loop /mnt/tmpfs/${ONEEXTRA} /pup_ro${CNTLOOP}
-    else
-    mount -o loop ${PFSSDIR}${ONEEXTRA} /pup_ro${CNTLOOP}
+    [ "$PCOPY" = "yes" ] && mount -t tmpfs tmpfs /mnt/tmpfs
+    if [ "$PDEV1" = "" ]; then
+        echo "Укажите загрузочное устройство, например sda1" > /dev/console
+        read PDEV1
     fi
-    [ $? -eq 0 ] && UMNTRO="${UMNTRO}:/pup_ro${CNTLOOP}=ro"
-    echo -n "$CNTLOOP " >> /tmp/CNTLOOP
-    CNTLOOP=`expr $CNTLOOP + 1`
-    [ $CNTLOOP -eq 48 ] && break
-    echo -n "." > /dev/console
-  done
-  check_status 0
- else
- echo -n "Модули не найдены, уточните параметр psubdir" > /dev/console
- check_status 1
- fi
-else
-echo -n "Загрузка без модулей" > /dev/console
-check_status 0
-fi
-if [ ! -d /mnt/dev_base$PSUBDIR/changes -a "$PCOPY" = "yes" ]; then
-umount /mnt/dev_base
-fi
+    echo -n "Монтирование загрузочного устройства" > /dev/console
+    [ ${PDEV1:0:4} = ${PDEV1:0:7} ] && PTH='/dev/'|| PTH='UUID='
+    until mount ${PTH}${PDEV1} /mnt/dev_base $RO 2>/dev/null && check_status 0
+    do
+        sleep 1
+        echo -n . >/dev/console
+    done
+    if [ "$PSUBDIR" = "" ]; then
+        echo "Укажите загрузочный каталог, если файлы PuppyRus
+        в корне раздела просто нажмите Enter" > /dev/console
+        read PSUBDIR
+        [ $PSUBDIR ] && PSUBDIR=/$PSUBDIR
+    fi
+    find /mnt/dev_base${PSUBDIR}/base/${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}-base.sfs 2>/dev/null > /tmp/PUPPYFILES
+    echo -n "Загружается базовый файл" > /dev/console
+    if [ "$PCOPY" = "yes" ]; then
+        cp /mnt/dev_base${PSUBDIR}/base/${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}-base.sfs /mnt/tmpfs/
+        mount -o loop /mnt/tmpfs/${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}-base.sfs /pup_ro2 || (echo "База не найдена">/dev/console; check_status 1)
+    else
+        mount -o loop /mnt/dev_base${PSUBDIR}/base/${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}-base.sfs /pup_ro2  || (echo "База не найдена">/dev/console; check_status 1)
+    fi
+    if [ -d /mnt/dev_base$PSUBDIR/changes -a "$RO" != "-r" ]; then
+        ln -s /mnt/dev_base$PSUBDIR/changes /pup_rw || check_status 1
+        echo -n ", подключается каталог сохранения." > /dev/console
+    elif [ -f /mnt/dev_base$PSUBDIR/base/${DISTRO_FILE_PREFIX}-save.sfs ]; then 
+        if [ "$PCOPY" = "yes" ]; then
+            cp /mnt/dev_base$PSUBDIR/base/${DISTRO_FILE_PREFIX}-save.sfs /mnt/tmpfs/
+            mount -o loop /mnt/tmpfs/${DISTRO_FILE_PREFIX}-save.sfs /pup_ro1 || check_status 1
+        else
+            mount -o loop /mnt/dev_base$PSUBDIR/base/${DISTRO_FILE_PREFIX}-save.sfs /pup_ro1 || check_status 1
+        fi
+        UMNTMAIN='/pup_ro1=ro:'
+        MKRAM="yes"
+        echo -n " и файл сохранения " > /dev/console
+        PUPMODE=11
+    elif [ -f /mnt/dev_base$PSUBDIR/${DISTRO_FILE_PREFIX}-save.[234]fs -a "$PRAMONLY" != "yes" ]; then
+        if [ "$(cat /sys/block/${PDEV1:0:3}/events)" = "media_change" ]; then
+            mount -o loop /mnt/dev_base$PSUBDIR/${DISTRO_FILE_PREFIX}-save.[234]fs /pup_ro1 || check_status 1
+            MKRAM="yes"
+            UMNTMAIN='/pup_ro1=ro:'
+            echo -n " и файл сохранения " > /dev/console
+            PUPMODE=13
+            PMEDIA=usbflash
+        else
+            mkdir /pup_rw 
+            mount -o loop /mnt/dev_base$PSUBDIR/${DISTRO_FILE_PREFIX}-save.[234]fs /pup_rw || check_status 1
+            PUPMODE=12
+        fi
+    else
+        MKRAM="yes"
+        PUPMODE=5
+    fi
+    if [ -f /mnt/dev_base$PSUBDIR/base/kernel-${KERNELVER}.sfs ]; then
+        echo /mnt/dev_base$PSUBDIR/base/kernel-${KERNELVER}.sfs >> /tmp/PUPPYFILES
+        if [ "$PCOPY" = "yes" ]; then
+            cp /mnt/dev_base$PSUBDIR/base/kernel-${KERNELVER}.sfs /mnt/tmpfs
+            losetup /dev/loop2 /mnt/tmpfs/kernel-${KERNELVER}.sfs
+            mount /dev/loop2 /pup_z || check_status 1
+        else
+            losetup /dev/loop2 /mnt/dev_base$PSUBDIR/base/kernel-${KERNELVER}.sfs
+            mount /dev/loop2 /pup_z || check_status 1
+        fi
+        ZLAYER=':/pup_z=ro'
+    fi
+    if [ "$MKRAM" = "yes" ]; then
+        ALLOCK=$(($(free | grep 'Mem:' | tr -s ' ' | cut -f 2 -d ' ') / 2)) #half of physical.
+        [ $ALLOCK -gt 524288 ] && ALLOCK=524288
+        mkdir /pup_rw
+        mount -t tmpfs -o size=${ALLOCK}k tmpfs /pup_rw
+        echo -n " плюс tmpfs." > /dev/console
+    fi
+    check_status 0
+    ########################END FINDING AND LOADING PUPPY FILES############################
+
+    ##########################FINDING AND LOADING PUPPY MODULES###########################
+
+    if [ "$PSOFT" != "no" -o -d /mnt/dev_base{PSUBDIR}/${PFSDIR} ];then
+        EXTRASFSLIST="$modules $(find /mnt/dev_base${PSUBDIR}/${PFSDIR} -name *\.pfs -exec basename {} \;)"
+        if [ "$EXTRASFSLIST" != "" ];then
+            echo -n "Загружаются модули программ" > /dev/console
+            echo "$EXTRASFSLIST" > /tmp/PFSMODULES
+            CNTLOOP=4
+            for ONEEXTRA in $EXTRASFSLIST
+            do
+                [ "$(dirname $ONEEXTRA)" = "." ] && PFSSDIR="/mnt/dev_base$PSUBDIR/$PFSDIR" || PFSSDIR="/mnt/dev_base/"
+                [ -f ${PFSSDIR}${ONEEXTRA} ] || continue
+                [ "$(mount | grep $ONEEXTRA)" = "" ] || continue
+                mkdir -p /pup_ro${CNTLOOP}
+                if [ "$PCOPY" = "yes" ]; then
+                    cp ${PFSSDIR}${ONEEXTRA} /mnt/tmpfs/
+                    mount -o loop /mnt/tmpfs/${ONEEXTRA} /pup_ro${CNTLOOP}
+                else
+                    mount -o loop ${PFSSDIR}${ONEEXTRA} /pup_ro${CNTLOOP}
+                fi
+                [ $? -eq 0 ] && UMNTRO="${UMNTRO}:/pup_ro${CNTLOOP}=ro"
+                echo -n "$CNTLOOP " >> /tmp/CNTLOOP
+                CNTLOOP=`expr $CNTLOOP + 1`
+                [ $CNTLOOP -eq 48 ] && break
+                echo -n "." > /dev/console
+            done
+            check_status 0
+        else
+            echo -n "Модули не найдены, уточните параметр psubdir" > /dev/console
+            check_status 1
+        fi
+    else
+        echo -n "Загрузка без модулей" > /dev/console
+        check_status 0
+    fi
+    if [ ! -d /mnt/dev_base$PSUBDIR/changes -a "$PCOPY" = "yes" ]; then
+        umount /mnt/dev_base
+    fi
 }
 #####################END FINDING AND LOADING PUPPY MODULES#################
 
 ##############LOAD PUPPY FILES FROM TFTP SERVER#################
 lan_load () {
-echo -n "Проверяем Ethernet..." > /dev/console
-ifconfig lo up
-lanIface=$(ls -1 /sys/class/net/ | grep ^eth) || check_status 1
-for OneIface in $lanIface
- do
-ifconfig $OneIface up
-hostIp=$(udhcpc -n -i $OneIface | grep Lease | cut -f 3 -d ' ')
-  if [ "$hostIp" ]; then
-[ $(echo $IP | cut -f -3 -d '.') = $(echo $hostIp | cut -f -3 -d '.') ] || continue
-  else
-hostIp=$(echo $IP | cut -f -3 -d '.').222
-  fi
-ifconfig $OneIface $hostIp up
-check_status $?
-break
- done
-echo "IP=$IP" > /tmp/ftp
-echo "DIR=$DIR" >> /tmp/ftp
-mount -t tmpfs tmpfs /mnt/tmpfs
-echo -n "Введите логин, если необходим, или нажмите Enter:" > /dev/console
-read LOGIN
-if [ "$LOGIN" ]; then
-echo "LOGIN=$LOGIN" >> /tmp/ftp
-LOGIN="-u $LOGIN"
-echo "Введите пароль (слепой ввод):" > /dev/console
-read -s PASSW
-echo "PASSW=$PASSW" >> /tmp/ftp
-PASSW="-p $PASSW"
-fi
+    echo -n "Проверяем Ethernet..." > /dev/console
+    ifconfig lo up
+    lanIface=$(ls -1 /sys/class/net/ | grep ^eth) || check_status 1
+    for OneIface in $lanIface
+    do
+        ifconfig $OneIface up
+        hostIp=$(udhcpc -n -i $OneIface | grep Lease | cut -f 3 -d ' ')
+        if [ "$hostIp" ]; then
+            [ $(echo $IP | cut -f -3 -d '.') = $(echo $hostIp | cut -f -3 -d '.') ] || continue
+        else
+            hostIp=$(echo $IP | cut -f -3 -d '.').222
+        fi
+        ifconfig $OneIface $hostIp up
+        check_status $?
+        break
+    done
+    echo "IP=$IP" > /tmp/ftp
+    echo "DIR=$DIR" >> /tmp/ftp
+    mount -t tmpfs tmpfs /mnt/tmpfs
+    echo -n "Введите логин, если необходим, или нажмите Enter:" > /dev/console
+    read LOGIN
+    if [ "$LOGIN" ]; then
+        echo "LOGIN=$LOGIN" >> /tmp/ftp
+        LOGIN="-u $LOGIN"
+        echo "Введите пароль (слепой ввод):" > /dev/console
+        read -s PASSW
+        echo "PASSW=$PASSW" >> /tmp/ftp
+        PASSW="-p $PASSW"
+    fi
 
-echo -n "Загружается по сети базовый файл" > /dev/console
-ftpget $LOGIN $PASSW $IP /mnt/tmpfs/${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}-base.sfs Volume_1/base/${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}-base.sfs
-mount -o loop /mnt/tmpfs/${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}-base.sfs /pup_ro2 || (echo "База не найдена">/dev/console; check_status 1)
-if ftpget $LOGIN $PASSW $IP /mnt/tmpfs/${DISTRO_FILE_PREFIX}-save.sfs Volume_1/base/${DISTRO_FILE_PREFIX}-save.sfs; then
-echo -n ", файл сохранения " > /dev/console
-mount -o loop /mnt/tmpfs/${DISTRO_FILE_PREFIX}-save.sfs /pup_ro1 && UMNTMAIN='/pup_ro1=ro+wh:'
-fi
-if ftpget $LOGIN $PASSW $IP /mnt/tmpfs/kernel-${KERNELVER}.sfs Volume_1/base/kernel-${KERNELVER}.sfs; then
-echo -n ", модуль ядра " > /dev/console
-mount -o loop /mnt/tmpfs/kernel-${KERNELVER}.sfs /pup_z && ZLAYER=':/pup_z=ro'
-fi
- ALLOCK=$(($(free | grep 'Mem:' | tr -s ' ' | cut -f 2 -d ' ') / 2)) #half of physical.
- [ $ALLOCK -gt 524288 ] && ALLOCK=524288
- mkdir /pup_rw
- mount -t tmpfs -o size=${ALLOCK}k tmpfs /pup_rw && echo -n " плюс tmpfs." > /dev/console
- PUPMODE=lan
- check_status 0
-##############END LOAD PUPPY FILES FROM TFTP SERVER#################
+    echo -n "Загружается по сети базовый файл" > /dev/console
+    ftpget $LOGIN $PASSW $IP /mnt/tmpfs/${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}-base.sfs Volume_1/base/${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}-base.sfs
+    mount -o loop /mnt/tmpfs/${DISTRO_FILE_PREFIX}-${DISTRO_VERSION}-base.sfs /pup_ro2 || (echo "База не найдена">/dev/console; check_status 1)
+    if ftpget $LOGIN $PASSW $IP /mnt/tmpfs/${DISTRO_FILE_PREFIX}-save.sfs Volume_1/base/${DISTRO_FILE_PREFIX}-save.sfs; then
+        echo -n ", файл сохранения " > /dev/console
+        mount -o loop /mnt/tmpfs/${DISTRO_FILE_PREFIX}-save.sfs /pup_ro1 && UMNTMAIN='/pup_ro1=ro+wh:'
+    fi
+    if ftpget $LOGIN $PASSW $IP /mnt/tmpfs/kernel-${KERNELVER}.sfs Volume_1/base/kernel-${KERNELVER}.sfs; then
+        echo -n ", модуль ядра " > /dev/console
+        mount -o loop /mnt/tmpfs/kernel-${KERNELVER}.sfs /pup_z && ZLAYER=':/pup_z=ro'
+    fi
+    ALLOCK=$(($(free | grep 'Mem:' | tr -s ' ' | cut -f 2 -d ' ') / 2)) #half of physical.
+    [ $ALLOCK -gt 524288 ] && ALLOCK=524288
+    mkdir /pup_rw
+    mount -t tmpfs -o size=${ALLOCK}k tmpfs /pup_rw && echo -n " плюс tmpfs." > /dev/console
+    PUPMODE=lan
+    check_status 0
+    ##############END LOAD PUPPY FILES FROM TFTP SERVER#################
 }
 
 if [ "$IP" ]; then
-lan_load
+    lan_load
 else
-hd_load
+    hd_load
 fi
 
 mkdir -p /pup_rw/etc/rc.d
@@ -368,7 +368,7 @@ echo "PUPMODE=$PUPMODE" > /pup_rw/etc/rc.d/PUPSTATE
 #######################SETUP UNIONFS LAYERED FILESYSTEM###################
 #create the unionfs layered f.s.... ***THE BIG EVENT***
 echo -n "Настройка слоёв файловой системы unionfs..." > /dev/console
- mount -t aufs -o udba=reval,diropq=w,dirs=/pup_rw=rw:${UMNTMAIN}/pup_ro2=ro${ZLAYER}${UMNTRO} unionfs /pup_new
+mount -t aufs -o udba=reval,diropq=w,dirs=/pup_rw=rw:${UMNTMAIN}/pup_ro2=ro${ZLAYER}${UMNTRO} unionfs /pup_new
 
 check_status $? #END STEP FIVE
 #######################END SETUP UNIONFS LAYERED FILESYSTEM###################
@@ -381,8 +381,9 @@ echo -n "Замещение корневой файловой системы н�
 #cpio archive does switch_root, lose the initial-ramfs, so move all mntd...
 mkdir -p /pup_new/initrd/pup_rw
 mkdir -p /pup_new/initrd/pup_z
-for CNTLOOP in 1 2 3 `cat /tmp/CNTLOOP`; do
-mkdir -p /pup_new/initrd/pup_ro${CNTLOOP}; done
+for CNTLOOP in 1 2 3 `cat /tmp/CNTLOOP`; do  
+    mkdir -p /pup_new/initrd/pup_ro${CNTLOOP}; 
+done
 mkdir -p /pup_new/initrd/mnt/dev_base
 mkdir -p /pup_new/initrd/mnt/dev_save
 mkdir -p /pup_new/initrd/mnt/swap
@@ -392,19 +393,19 @@ mkdir -p /pup_new/initrd/tmp
 #end DdShurick
 for ONEMNT in `mount | cut -f 3 -d ' ' | grep -v 'pup_new' | grep '^/pup_' | tr '\n' ' '`
 do
- mount -o move $ONEMNT /pup_new/initrd${ONEMNT}
+    mount -o move $ONEMNT /pup_new/initrd${ONEMNT}
 done
 for ONEMNT in `mount | cut -f 3 -d ' ' | grep '^/mnt/' | tr '\n' ' '`
 do
- mount -o move $ONEMNT /pup_new/initrd${ONEMNT}
+    mount -o move $ONEMNT /pup_new/initrd${ONEMNT}
 done
 #mount home partition. Add DdShurick
 if [ $CRYPTHOME ]; then
-mount $CRYPTHOME /pup_new/home
+    mount $CRYPTHOME /pup_new/home
 elif [ $UUID ]; then
-mount UUID=$UUID /pup_new/home
+    mount UUID=$UUID /pup_new/home
 elif [ $LABEL ];then
-mount LABEL=$LABEL /pup_new/home
+    mount LABEL=$LABEL /pup_new/home
 fi
 
 #PNOX is a boot param. /etc/profile prevents X from starting if this file exists...
@@ -414,9 +415,9 @@ cp -af /tmp/* /pup_new/initrd/tmp/ #keep any log files.
 
 #RDSH is a boot param. exit to initial ramdisk shell...
 if [ "$RDSH" = "yes" ];then
- echo > /dev/console
- echo "Выходим в оболочку рамдиска. Наберите 'exec switch' для продолжения загрузки PuppyRus." > /dev/console
- exec /bin/sh >/dev/console 2>&1
+    echo > /dev/console
+    echo "Выходим в оболочку рамдиска. Наберите 'exec switch' для продолжения загрузки PuppyRus." > /dev/console
+    exec /bin/sh >/dev/console 2>&1
 fi
 
 sync
